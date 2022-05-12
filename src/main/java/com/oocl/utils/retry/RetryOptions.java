@@ -142,5 +142,9 @@ public class RetryOptions {
                 return new Builder(options, (Throwable t) -> false);
             return new Builder(options, shouldReleaseLock);
         }
+
+        public RetryOptions build() {
+            return options;
+        }
     }
 }
