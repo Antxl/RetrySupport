@@ -1,8 +1,11 @@
 package com.oocl.utils.retry;
 
+import lombok.Getter;
+
 import java.util.function.LongFunction;
 import java.util.function.Predicate;
 
+@Getter
 public class RetryOptions {
     private final Class<? extends Throwable> retryFor;
     private final Integer maxRetryCount;
@@ -22,22 +25,6 @@ public class RetryOptions {
         this.nextInterval = nextInterval;
         this.executionTimeOut = executionTimeOut;
         this.releaseLockIndicator = releaseLockIndicator;
-    }
-
-    public Integer getMaxRetryCount() {
-        return maxRetryCount;
-    }
-
-    public LongFunction<Interval> getNextInterval() {
-        return nextInterval;
-    }
-
-    public Long getExecutionTimeOut() {
-        return executionTimeOut;
-    }
-
-    public Predicate<Throwable> getReleaseLockIndicator() {
-        return releaseLockIndicator;
     }
 
     public boolean shouldRetryFor(Throwable t) {

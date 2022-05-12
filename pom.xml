@@ -6,7 +6,7 @@
 
   <groupId>com.oocl.utils.retry</groupId>
   <artifactId>RetrySupport</artifactId>
-  <version>1.0</version>
+  <version>1.1</version>
 
   <name>RetrySupport</name>
   <!-- FIXME change it to the project's website -->
@@ -24,6 +24,12 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${common.lang.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.22</version>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 
