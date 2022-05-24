@@ -17,11 +17,11 @@ public final class RetrySupport {
     private RetrySupport() {}
 
     public static void runWithRetry(Runnable runnable) {
-        runWithRetry().decorateRunnable(runnable).run();
+        runWithRetry().run(runnable);
     }
 
     public static <R> R runWithRetry(Supplier<R> supplier) {
-        return runWithRetry().decorateSupplier(supplier).get();
+        return runWithRetry().supply(supplier);
     }
 
     public static RetryableRunner runWithRetry() {
