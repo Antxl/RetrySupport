@@ -17,11 +17,11 @@ public final class RetrySupport {
     private RetrySupport() {}
 
     public static void runWithRetry(Runnable runnable) {
-        runWithRetry().decorate(runnable).run();
+        runWithRetry().decorateRunnable(runnable).run();
     }
 
     public static <R> R runWithRetry(Supplier<R> supplier) {
-        return runWithRetry().decorate(supplier).get();
+        return runWithRetry().decorateSupplier(supplier).get();
     }
 
     public static RetryableRunner runWithRetry() {
@@ -57,17 +57,33 @@ public final class RetrySupport {
             return parameter(() -> parameter);
         }
 
-        Runnable decorate(Runnable runnable);
+        default void run(Runnable runnable) {
+            decorateRunnable(runnable).run();
+        }
 
-        <R> Supplier<R> decorate(Supplier<R> supplier);
+        Runnable decorateRunnable(Runnable runnable);
+
+        default <R> R supply(Supplier<R> supplier) {
+            return decorateSupplier(supplier).get();
+        }
+
+        <R> Supplier<R> decorateSupplier(Supplier<R> supplier);
 
         ReadyRetryableRunner appendListener(RetryEventListener... listeners);
     }
 
     public interface ReadyParameterizedRetryableRunner<P> {
-        Runnable decorate(Consumer<P> consumer);
+        default void consume(Consumer<P> runnable) {
+            decorateRunnable(runnable).run();
+        }
 
-        <R> Supplier<R> decorate(Function<P, R> processor);
+        Runnable decorateRunnable(Consumer<P> consumer);
+
+        default <R> R process(Function<P, R> processor) {
+            return decorateSupplier(processor).get();
+        }
+
+        <R> Supplier<R> decorateSupplier(Function<P, R> processor);
 
         ReadyParameterizedRetryableRunner<P> appendListener(RetryEventListener... listeners);
     }
@@ -112,7 +128,7 @@ public final class RetrySupport {
         }
 
         @Override
-        public Runnable decorate(Runnable runnable) {
+        public Runnable decorateRunnable(Runnable runnable) {
             return new RetryingContext<>(options, null, o -> {
                 runnable.run();
                 return null;
@@ -120,7 +136,7 @@ public final class RetrySupport {
         }
 
         @Override
-        public <R> Supplier<R> decorate(Supplier<R> supplier) {
+        public <R> Supplier<R> decorateSupplier(Supplier<R> supplier) {
             return new RetryingContext<>(options, null, o -> supplier.get(), getListeners());
         }
 
@@ -148,7 +164,7 @@ public final class RetrySupport {
         }
 
         @Override
-        public Runnable decorate(Consumer<P> consumer) {
+        public Runnable decorateRunnable(Consumer<P> consumer) {
             return new RetryingContext<>(options, parameter, p -> {
                 consumer.accept(p);
                 return null;
@@ -156,7 +172,7 @@ public final class RetrySupport {
         }
 
         @Override
-        public <R> Supplier<R> decorate(Function<P, R> processor) {
+        public <R> Supplier<R> decorateSupplier(Function<P, R> processor) {
             return new RetryingContext<>(options, parameter, processor, getListeners());
         }
 
