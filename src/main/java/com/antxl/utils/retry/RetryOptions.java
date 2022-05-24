@@ -1,30 +1,17 @@
 package com.antxl.utils.retry;
 
-import lombok.Getter;
-
 import java.util.function.LongFunction;
 import java.util.function.Predicate;
 
-@Getter
-public class RetryOptions {
-    private final Class<? extends Throwable> retryFor;
-    private final Integer maxRetryCount;
-    private final LongFunction<Interval> nextInterval;
-    private final Long executionTimeOut;
-    private final Predicate<Throwable> releaseLockIndicator;
+import static java.util.Objects.requireNonNullElseGet;
 
+public record RetryOptions(Class<? extends Throwable> retryFor, Integer maxRetryCount, 
+                           LongFunction<Interval> nextInterval, Long executionTimeOut, 
+                           Predicate<Throwable> releaseLockIndicator) {
     public static final RetryOptions DEFAULT = new RetryOptions();
 
     private RetryOptions() {
         this(Throwable.class, null, null, null, t -> false);
-    }
-
-    private RetryOptions(Class<? extends Throwable> retryFor, Integer maxRetryCount, LongFunction<Interval> nextInterval, Long executionTimeOut, Predicate<Throwable> releaseLockIndicator) {
-        this.retryFor = retryFor;
-        this.maxRetryCount = maxRetryCount;
-        this.nextInterval = nextInterval;
-        this.executionTimeOut = executionTimeOut;
-        this.releaseLockIndicator = releaseLockIndicator;
     }
 
     public boolean shouldRetryFor(Throwable t) {
@@ -49,41 +36,37 @@ public class RetryOptions {
             return 0;
         try {
             if (releaseLockIndicator.test(t))
-                interval.getUnit().timedWait(this, interval.getValue());
+                interval.unit().timedWait(this, interval.value());
             else
-                interval.getUnit().sleep(interval.getValue());
-        } catch (InterruptedException e) {
-            //Ignore
-        }
+                interval.unit().sleep(interval.value());
+        } catch (InterruptedException ignored) {}
         return interval.getTimeInMs();
     }
 
-    public static final class Builder {
-        private final RetryOptions options;
-
+    public record Builder(RetryOptions options) {
         public Builder() {
-            options = DEFAULT;
+            this(DEFAULT);
         }
 
         private Builder(RetryOptions options, Class<? extends Throwable> exceptionClass) {
-            this.options = new RetryOptions(exceptionClass, options.maxRetryCount, options.nextInterval, options.executionTimeOut, options.releaseLockIndicator);
+            this(new RetryOptions(exceptionClass, options.maxRetryCount, options.nextInterval, options.executionTimeOut, options.releaseLockIndicator));
         }
 
         private Builder(RetryOptions options, Integer maxRetryCount) {
-            this.options = new RetryOptions(options.retryFor, maxRetryCount, options.nextInterval, options.executionTimeOut, options.releaseLockIndicator);
+            this(new RetryOptions(options.retryFor, maxRetryCount, options.nextInterval, options.executionTimeOut, options.releaseLockIndicator));
         }
 
         private Builder(RetryOptions options, LongFunction<Interval> intervalIter) {
-            this.options = new RetryOptions(options.retryFor, options.maxRetryCount, intervalIter, options.executionTimeOut, options.releaseLockIndicator);
+            this(new RetryOptions(options.retryFor, options.maxRetryCount, intervalIter, options.executionTimeOut, options.releaseLockIndicator));
         }
 
         private Builder(RetryOptions options, Interval maxExecution) {
-            this.options = new RetryOptions(options.retryFor, options.maxRetryCount, options.nextInterval,
-                    maxExecution == null ? null : maxExecution.getTimeInMs(), options.releaseLockIndicator);
+            this(new RetryOptions(options.retryFor, options.maxRetryCount, options.nextInterval,
+                    maxExecution == null ? null : maxExecution.getTimeInMs(), options.releaseLockIndicator));
         }
 
         private Builder(RetryOptions options, Predicate<Throwable> maxExecution) {
-            this.options = new RetryOptions(options.retryFor, options.maxRetryCount, options.nextInterval, options.executionTimeOut, maxExecution);
+            this(new RetryOptions(options.retryFor, options.maxRetryCount, options.nextInterval, options.executionTimeOut, maxExecution));
         }
 
         public Builder retryFor(Class<? extends Throwable> exceptionClass) {
@@ -125,9 +108,7 @@ public class RetryOptions {
         }
 
         public Builder shouldReleaseLock(Predicate<Throwable> shouldReleaseLock) {
-            if (shouldReleaseLock == null)
-                return new Builder(options, (Throwable t) -> false);
-            return new Builder(options, shouldReleaseLock);
+            return new Builder(options, requireNonNullElseGet(shouldReleaseLock, () -> (Throwable t) -> false));
         }
 
         public RetryOptions build() {

@@ -1,16 +1,6 @@
 package com.antxl.utils.retry.event;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
-@Getter
-@RequiredArgsConstructor
-public class RetryEvent {
-    private final Throwable cause;
-    private final int retriedCount;
-    private final long currentRunningMs;
-    private final long lastInterval;
-
+public record RetryEvent(Throwable cause, int retriedCount, long currentRunningMs, long lastInterval) {
     @Override
     public String toString() {
         return "RetryEvent: {" +

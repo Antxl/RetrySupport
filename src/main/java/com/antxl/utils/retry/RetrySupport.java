@@ -14,6 +14,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public final class RetrySupport {
+    private RetrySupport() {}
+
     public static void runWithRetry(Runnable runnable) {
         runWithRetry().run(runnable);
     }
@@ -33,7 +35,11 @@ public final class RetrySupport {
     public interface RetryableRunner extends ReadyRetryableRunner {
         ReadyRetryableRunner options(RetryOptions options);
 
-        <P> ParameterizedRetryableRunner<P> parameter(P parameter);
+        <P> ParameterizedRetryableRunner<P> parameter(Supplier<P> parameter);
+
+        default <P> ParameterizedRetryableRunner<P> parameter(P parameter) {
+            return parameter(() -> parameter);
+        }
 
         RetryableRunner appendListener(RetryEventListener... listeners);
     }
@@ -45,7 +51,11 @@ public final class RetrySupport {
     }
 
     public interface ReadyRetryableRunner {
-        <P> ReadyParameterizedRetryableRunner<P> parameter(P parameter);
+        <P> ReadyParameterizedRetryableRunner<P> parameter(Supplier<P> parameter);
+
+        default <P> ReadyParameterizedRetryableRunner<P> parameter(P parameter) {
+            return parameter(() -> parameter);
+        }
 
         void run(Runnable runnable);
 
@@ -97,7 +107,7 @@ public final class RetrySupport {
         }
 
         @Override
-        public <P> ParameterizedRetryableRunner<P> parameter(P parameter) {
+        public <P> ParameterizedRetryableRunner<P> parameter(Supplier<P> parameter) {
             return new ParameterizedRetryableRunnerImpl<>(options, parameter, getListeners());
         }
 
@@ -124,9 +134,9 @@ public final class RetrySupport {
 
     private static final class ParameterizedRetryableRunnerImpl<P> extends ListenedRetryableRunnerBase implements ParameterizedRetryableRunner<P> {
         private final RetryOptions options;
-        private final P parameter;
+        private final Supplier<P> parameter;
 
-        private ParameterizedRetryableRunnerImpl(RetryOptions options, P parameter, List<RetryEventListener> listeners) {
+        private ParameterizedRetryableRunnerImpl(RetryOptions options, Supplier<P> parameter, List<RetryEventListener> listeners) {
             super(listeners);
             this.options = Optional.ofNullable(options).orElse(RetryOptions.DEFAULT);
             this.parameter = parameter;
@@ -160,7 +170,7 @@ public final class RetrySupport {
 
     private static final class RetryingContext<P, R> {
         private final RetryOptions options;
-        private final P parameter;
+        private final Supplier<P> parameter;
         private final Function<P, R> runner;
         private final List<RetryEventListener> listeners;
         private final boolean hasAnyListener;
@@ -170,7 +180,7 @@ public final class RetrySupport {
         private R result;
         private Throwable t;
 
-        private RetryingContext(RetryOptions options, P parameter, Function<P, R> runner, List<RetryEventListener> listeners) {
+        private RetryingContext(RetryOptions options, Supplier<P> parameter, Function<P, R> runner, List<RetryEventListener> listeners) {
             this.options = options;
             this.parameter = parameter;
             this.runner = runner;
@@ -193,7 +203,7 @@ public final class RetrySupport {
 
         private boolean fireEvent(RetryEvent event) {
             boolean shouldBreakRetry = false;
-            for (RetryEventListener listener: listeners) {
+            for (var listener: listeners) {
                 try {
                     listener.preRetry(event);
                 } catch (BreakRetryException e) {
@@ -205,7 +215,7 @@ public final class RetrySupport {
 
         private boolean tryRun() {
             try {
-                result = runner.apply(parameter);
+                result = runner.apply(parameter.get());
                 return false;
             } catch (Throwable t) {
                 this.t = t;
